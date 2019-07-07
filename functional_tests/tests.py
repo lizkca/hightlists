@@ -1,10 +1,26 @@
 from django.test import LiveServerTestCase
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import WebDriverException
+
 import time
-import unittest
+
+MAX_WAIT = 10
 
 class NewVisitorTest(LiveServerTestCase):
+
+    def wait_for_row_in_list_table(self, row_text):
+        start_time = time.time()
+        while True:
+            try:
+                table = self.browser.find_element_by_id('id_list_table')
+                rows = table.find_elements_by_tag_name('tr')
+                self.assertIn(row_text, [row.text for row in rows])
+                return
+            except (AssertionError, WebDriverException) as e:
+                if time.time() - start_time > MAX_WAIT:
+                    raise e
+                time.sleep(0.5)
 
     def setUp(self):
         self.browser = webdriver.Firefox()
@@ -56,8 +72,7 @@ class NewVisitorTest(LiveServerTestCase):
         # The webpage update after she hit the Key Enter.
         # The table shows"1: Buy peacock feathers"
         inputbox.send_keys(Keys.ENTER)
-        time.sleep(1)
-        self.check_for_row_in_list_table('1: Buy peacock feathers')
+        self.wait_for_row_in_list_table('1: Buy peacock feathers')
 
         # the page show up another frame, so that you can enter other to-do.
         # She input "Use peacock feathers to make a fly"
@@ -65,11 +80,10 @@ class NewVisitorTest(LiveServerTestCase):
         inputbox = self.browser.find_element_by_id('id_new_item')
         inputbox.send_keys('Use peacock feathers to make a fly')
         inputbox.send_keys(Keys.ENTER)
-        time.sleep(1)
 
         # The page update again, and shows that two to-do list.
-        self.check_for_row_in_list_table('1: Buy peacock feathers')
-        self.check_for_row_in_list_table('2: Use peacock feathers to make a fly')
+        self.wait_for_row_in_list_table('2: Use peacock feathers to make a fly')
+        self.wait_for_row_in_list_table('1: Buy peacock feathers')
 
         # Edith want to know if the website have keeped her to-do list.
         # She saw the web give a unique URL for her.
