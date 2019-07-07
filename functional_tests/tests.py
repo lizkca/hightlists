@@ -48,7 +48,8 @@ class NewVisitorTest(LiveServerTestCase):
         # 可以排名。
         # 可以邀请别人支付虚拟美金，助你完成目标。
 
-    def test_can_start_a_list_and_retrieve_it_later(self):
+
+    def test_can_start_a_list_for_one_user(self):
         # Edith hear there is a cool to-do list website.
         # She visits the home page of that website.
         self.browser.get(self.live_server_url)
@@ -84,11 +85,52 @@ class NewVisitorTest(LiveServerTestCase):
         # The page update again, and shows that two to-do list.
         self.wait_for_row_in_list_table('2: Use peacock feathers to make a fly')
         self.wait_for_row_in_list_table('1: Buy peacock feathers')
+        
+        # She was happy, and go to bed.
 
-        # Edith want to know if the website have keeped her to-do list.
-        # She saw the web give a unique URL for her.
-        # And the page have some help text.
-        self.fail('Finish the text!')
+    def test_multiple_users_can_start_lists_at_different_urls(self):
+        # Edith build a new to-do list.
+        self.browser.get(self.live_server_url)
+        inputbox = self.browser.find_element_by_id('id_new_item')
+        inputbox.send_keys('Buy peacock feathers')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Buy peacock feathers')
 
-        # She visited that URL, and found that her to-do list still there.
-        # She was happy and go to bed.
+        # She noted that the to-do list has a unique URL
+        edith_list_url = self.browser.current_url
+        self.assertRegex(edith_list_url, '/lists/.+')
+
+        # now someone call Francis visit the webpage.
+
+        ## we use a new browser session
+        ## to make sure the data belongs Edith will not let out.
+        self.browser.quit()
+        self.browser = webdriver.Firefox()
+
+        # Francis visit the home page.
+        # that page did not show any of to-do list belongs Edith.
+        self.browser.get(self.live_server_url)
+        page_text = self.browser.find_element_by_tag_name('body').text
+        self.assertNotIn('Buy peacock feathers', page_text)
+        self.assertNotIn('make a fly', page_text)
+
+        # Francis enter a new to-do list
+        # He has little to-do lists, didn't like Edith 
+        inputbox = self.browser.find_element_by_id('id_new_item')
+        inputbox.send_keys('Buy milk')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Buy milk')
+
+        # Francis got his unique URL
+        francis_list_url = self.browser.current_url
+        self.assertRegex(francis_list_url, '/lists/.+')
+        self.assertNotEqual(francis_list_url, edith_list_url)
+
+        # this page did not show Edith's to-do list
+        page_text = self.browser.find_element_by_id('body').text
+        self.assertNotIn('Buy peacock feathers', page_text)
+        self.assertIn('Buy milk', page_text)
+
+        # both of two people were happy, and go to bed.
+
+
